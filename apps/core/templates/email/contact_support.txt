@@ -1,0 +1,12 @@
+New Contact Message from Website
+
+Name: {{ name }}
+Email: {{ email }}
+Contact Number: {{ contact_number|default:"N/A" }}
+Subject: {{ subject }}
+
+Message:
+{{ message }}
+
+---
+This message was sent from your website contact form.

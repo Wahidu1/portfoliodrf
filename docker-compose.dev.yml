@@ -1,0 +1,159 @@
+services:
+  django:
+    build:
+      context: .
+      dockerfile: ./compose/local/django/Dockerfile
+    image: portfoliodrf_local_django
+    container_name: portfoliodrf_local_django
+    depends_on:
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+    volumes:
+      - .:/app:z
+    env_file:
+      - .env
+    environment:
+      - pb=${pb:-default_value}
+    ports:
+      - "5000:8000"
+    command: /start
+    restart: on-failure
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8000/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 10s
+
+  postgres:
+    image: postgres:16.4-alpine3.20
+    container_name: portfoliodrf_local_postgres
+    volumes:
+      - portfoliodrf_local_postgres_data:/var/lib/postgresql/data
+      - portfoliodrf_local_postgres_data_backups:/backups
+    env_file:
+      - .env
+    environment:
+      - POSTGRES_HOST_AUTH_METHOD=trust
+    ports:
+      - "5433:5432"
+    restart: on-failure
+    healthcheck:
+      test: ["CMD", "pg_isready", "-U", "${POSTGRES_USER:-postgres}"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+      start_period: 10s
+
+  redis:
+    image: redis:7-alpine
+    container_name: portfoliodrf_local_redis
+    volumes:
+      - portfoliodrf_local_redis_data:/data
+    command: redis-server --appendonly yes # Enable persistence
+    restart: on-failure
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+      start_period: 10s
+    logging:
+      driver: "json-file"
+      options:
+        max-size: "10m"
+        max-file: "3"
+
+  celery_worker:
+    build:
+      context: .
+      dockerfile: ./compose/local/django/Dockerfile
+    image: portfoliodrf_local_celery_worker
+    container_name: portfoliodrf_local_celery_worker
+    depends_on:
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+    volumes:
+      - .:/app
+    env_file:
+      - .env
+    command: /start-celeryworker
+    restart: on-failure
+    healthcheck:
+      test: ["CMD", "celery", "-A", "config.celery", "inspect", "ping"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 10s
+    logging:
+      driver: "json-file"
+      options:
+        max-size: "10m"
+        max-file: "3"
+
+  celery-beat:
+    build:
+      context: .
+      dockerfile: ./compose/local/django/Dockerfile
+    image: portfoliodrf_local_celery_beat
+    container_name: portfoliodrf_local_celery_beat
+    depends_on:
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+    volumes:
+      - .:/app
+    env_file:
+      - .env
+    command: /start-celerybeat
+    restart: on-failure
+    healthcheck:
+      test: ["CMD", "celery", "-A", "config.celery", "inspect", "ping"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 10s
+    logging:
+      driver: "json-file"
+      options:
+        max-size: "10m"
+        max-file: "3"
+
+  flower:
+    build:
+      context: .
+      dockerfile: ./compose/local/django/Dockerfile
+    image: portfoliodrf_local_celery_flower
+    container_name: portfoliodrf_local_celery_flower
+    depends_on:
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+    volumes:
+      - .:/app
+    env_file:
+      - .env
+    command: /start-flower
+    restart: on-failure
+    healthcheck:
+      test: ["CMD", "celery", "-A", "config.celery", "inspect", "ping"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 10s
+    logging:
+      driver: "json-file"
+      options:
+        max-size: "10m"
+        max-file: "3"
+
+volumes:
+  portfoliodrf_local_postgres_data:
+  portfoliodrf_local_postgres_data_backups:
+  portfoliodrf_local_redis_data:
