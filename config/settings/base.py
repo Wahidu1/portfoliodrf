@@ -50,7 +50,8 @@ THIRD_PARTY_APPS = [
     "drf_spectacular_sidecar",
     "django_celery_results",
     "django_celery_beat",
-    "drf_standardized_errors"
+    "drf_standardized_errors",
+    'debug_toolbar',
 ]
 
 LOCAL_APPS = [
